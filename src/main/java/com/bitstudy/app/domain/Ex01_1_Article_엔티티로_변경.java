@@ -15,8 +15,8 @@ import java.util.Objects;
 @Table(indexes = {
         @Index(columnList = "title"),
         @Index(columnList = "hashtag"),
-        @Index(columnList = "createAt"),
-        @Index(columnList = "createBy"),
+        @Index(columnList = "createdAt"),
+        @Index(columnList = "createdBy"),
 
 })
 @ToString
