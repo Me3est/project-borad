@@ -1,9 +1,19 @@
 package com.bitstudy.app.domain;
 
+
+
+/* 할 일 : Lombok 사용하기
+ *  주의 : maven 때랑 같은 방식인 것들도 이름이 다르게 되어 있으니 헷갈리지 않게 주의
+ *
+ *  순서
+ *  1) Lombok 을 이용해서 클래스를 엔티티로 변경 @Entity
+ *  2) getter/setter, toString 등의 Lombok annotation 사용
+ *  3) 동등성, 동일성 비교 할 수 있는 코드 넣어볼 예정
+ * */
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.core.annotation.Order;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -11,85 +21,79 @@ import org.springframework.data.annotation.LastModifiedDate;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 
-@Table(indexes = {
-        @Index(columnList = "title"),
-        @Index(columnList = "hashtag"),
-        @Index(columnList = "createdAt"),
-        @Index(columnList = "createdBy"),
+/** @Table - 엔티티와 매핑할 정보를 지정하고
+사용법 : @Index(name ="원하는 명칭", columnList = "사용할 테이블명")
+name 부분을 생략하면 원래 이름 사용.
 
+ @Index - 데이터베이스 인덱스는 추가, 쓰기 및 저장 공간을 희생해서 테이블에 대한 데이터 검색 속도를 향상시키는 데이터 구조
+ 사용법 : @Entity 와 세트로 사용
+
+ */
+
+@Table(indexes = {
+        @Index(columnList = "title"),  // 검색속도 빠르게 해주는 작업
+        @Index(columnList = "hashtag"),
+        @Index(columnList = "createAt"),
+        @Index(columnList = "createBy")
 })
-@ToString
-@Getter
-@Entity
+@Entity // Lombok 을 이용해서 클래스를 엔티티로 변경 @Entity 가 붙은 클래스는 JPA 가 관리하게 된다.
+@Getter // 모든 필드의 getter 들이 생성
+@ToString // 모든 필드의 toString 생성
 public class Article {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Id // 전체 필드중에서 PK 표시 해주는 것 @Id 가 없으면 @Entity 어노테이션을 사용 못함
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // 해당 필드가 auto_increment 인 경우 @GeneratedValue 를 써서 자동으로 값이 생성되게 해줘야 한다. (기본키 전략)
+    private long id; // 게시글 고유 아이디
 
-/* @Setter 도 @Getter 처럼 클래스 단위로 걸수있는데, 그렇게 하면 모든 필드에 접근이 가능해짐.
-*  그런데 id와 메타데이터들 같은 경우에는 내가 부여하는게 아니라 JPA에서 자동으로 부여해주는 번호임. 메타데이터들도 자동으로 JPA 가
-*  셋팅하게 만들어야함. 그래서 id와 메타데이터는 @Setter 가 필요없음. @Setter 의 경우는 지금처럼 필요한 필드에만 주는걸 연습하자
- *  */
+    /*
+      @Setter 도 @Getter 처럼 클래스 단위로 걸 수 있는데, 그렇게 하면 모든 필드에 접근이 가능해진다.
+      그런데 id 같은 경우에는 내가 부여하는게 아니라 JPA 에서 자동으로 부여해주는 번호이다.
+      메타 데이터들도 자동으로 JPA 가 세팅 되게 만들어야 한다. 그래서 id 와 메타데이터는 @Setter 가 필요 없다.
+      @Setter 의 경우에는 지금처럼 필요한 필드에만 주는걸 연습하자.(요건 강사님 스타일)
 
-    /* @Column - 해당 칼럼이 not null 인 경우 @Column(nullable=false) 써줌.
-    *  기본값은 true라서 @Column을 아예 안쓰면 null 가능
-    * @Column(nullable=false, length="숫자") 숫자 안쓰면 기본값 255 적용.
-    *  */
-    @Setter @Column(nullable = false) private String title; // 제목
-    @Setter @Column(nullable = false, length=10000) private String content; // 본문
-    @Setter private String hashtag; // 해시태그
+    */
+
+    /**
+     @Column - 해당 컬럼이 not null 인 경우 @Column(nullable =false) 써준다.
+     기본 값은 true 라서 @Column 을 아예 안쓰면 null 가능
+     사용법 : @Column(nullable = false, length = 숫자) 숫자 안쓰면 기본 값 255 적용
+     */
+    @Setter
+    @Column(nullable = false)
+    private String title; // 제목
+
+    @Setter
+    @Column(nullable = false, length = 10000)
+    private String content; // 본문
+
+    @Setter
+    private String hashtag; // 해시태그
 
     @OrderBy("id")
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL)
-    @ToString.Exclude /* 이거 중요. 맨 위에 @ToString 이 있는데 마우스 올려보면 '@ToString includes~ lazy load 어쩌고' 나온다.
-     이건 퍼포먼스, 메모리 저하를 일으킬 수 있어서 성능적으로 안좋은 영향을 줄 수있음. 그래서 해당 필드를 가려주세요 하는 거.
-     */
+    @ToString.Exclude
     private final Set<ArticleComment> articleComments = new LinkedHashSet<>();
-    /* 이건 더 중요 : @ToString.Exclude 이걸 안해주면 순환잠초 이슈가 생길 수 있음.
-    *  여기서 ToString이 id, title, content, hashtag 다 찍고 Set<ArticleComent> 부분을 찍으려고
-    *  ArticleComent.java 파일에 가서 거기 있는 @ToString 이 원소들 다 찍으려고 하면서 우너소들 중에 private Article article;
-    *  을 보는 순간 다시 Article 의 @ToString 이 동작하면서 또 모든 원소들을 찍으려하고, 그러다가 다시 Set<ArticleComent>를 보고
-    *  또 ArticleComent 로 가서 toString 돌리고.... 이런식으로 동작하면서 메모리가 터질 수 있음. 그래서 Set<ArticleComent> 에
-    *  @ToString.Exclude을 달아준다.
-    *
-    * ArticleComent에 걸지않고 Article에 걸어주는 이유는 댓글이 글을 참조하는건 정삭적인 경우인데, 반대로 글이 댓글을 참조하는건
-    * 일반적인 경우는 아니기 때문에 Article에 exclude를 걸어준다.
-    *  */
 
-
-
-    /* jpa auditing : jpa 에서 자동으로 세팅하게 해줄때 사용하는 기능
-    *                 이거 하려면 config 파일이 별도로 있어야함
-    *                 config 패키지 만들으서 JpaConfig 클래스 만들자.
-    *
-    *  */
-
-
-    // 메타데이터
+    //메타데이터
     @CreatedDate
     @Column(nullable = false)
-    private LocalDateTime createdAt; // 생성일시
+    private LocalDateTime createAt; // 생성일자
 
     @CreatedBy
-    @Column(nullable = false, length=100)
-    private String createdBy; // 생성자
+    @Column(nullable = false,length = 100)
+    private String createBy; // 생성자
 
     @LastModifiedDate
-    @Column(nullable = false) private
-    LocalDateTime modifiedAt; // 생성일시
+    @Column(nullable = false)
+    private LocalDateTime modifiedAt; // 수정일자
 
     @LastModifiedBy
-    @Column(nullable = false, length=100)
+    @Column(nullable = false,length = 100)
     private String modifiedBy; // 수정자
-
-
-
     protected Article() {}
 
     private Article(String title, String content, String hashtag) {
@@ -98,8 +102,8 @@ public class Article {
         this.hashtag = hashtag;
     }
 
-    public static Article of(String title, String content, String hashtag) {
-        return new Article(title, content, hashtag);
+    public static Article of(String title, String content, String hashtag){
+        return new Article(title,content,hashtag);
     }
 
     @Override
@@ -107,13 +111,12 @@ public class Article {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Article article = (Article) o;
-        return id.equals(article.id);
+        return id == article.id;
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(id);
     }
+
 }
-
-
